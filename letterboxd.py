@@ -8,6 +8,7 @@ from requests import Session
 from bs4 import BeautifulSoup as soup
 # from tornado import gen, httpclient, ioloop, queues
 
+from config import BS_HTML_PARSER
 from logger import logger
 
 
@@ -87,7 +88,7 @@ class Letterboxd(object):
         has_next_page = True
         
         while has_next_page:
-            wlsoup = soup(self.request(WATCHLIST_URL % (self.username, current_page)), 'html5lib')
+            wlsoup = soup(self.request(WATCHLIST_URL % (self.username, current_page)), BS_HTML_PARSER)
 
             for film in wlsoup.find_all('li', class_='poster-container'):
                 container = film.find('div', class_='film-poster')

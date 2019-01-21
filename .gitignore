@@ -1,0 +1,13 @@
+*.pyc
+*.log
+*.log*
+*.sqlite3
+output/*
+data/*
+config.py
+test_*.py
+test.py
+tests.py
+*.ini
+/*.txt
+/*.png

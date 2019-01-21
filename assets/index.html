@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Navigation -->
+ <nav>
+  <select name="providers">
+   <option value="all">All providers</option>
+   {% for pid, name in providers.iteritems() %}
+    <option value="{{pid}}">{{ name }}</option>
+   {% endfor %}
+  </select>
+
+  <button name="fade_no_offers">Fade no offers</button>
+  <button name="hide_no_offers">Hide no offers</button>
+
+  <select name="genres">
+   <option value="all">All genres</option>
+   {% for genre, count in genres.iteritems() %}
+    <option>{{ genre }} ({{ count }})</option>
+   {% endfor %}
+  </select>
+  
+  <button name="shuffle">Shuffle</button>
+
+  <button name="sync_watchlish">Sync</button>
+ </nav>
+
+ <!-- Container -->
+ <div class="container"></div>
+{% endblock %}
+
+
+{% block templates %}{% raw %}
+<!-- Template: Film -->
+<script id="film_card_template" type="x-tmpl-mustache">
+ <div class="card" data-slug="{{slug}}" data-title="{{title}}" data-tmdbid="{{ids.tmdb}}">
+
+  <div class="backdrop" style="{{#metadata}}background-image: url('/image/{{../slug}}_backdrop.jpg');{{/metadata}}"></div>
+
+  <div class="details">
+   <h1>{{title}}{{#metadata}}<span>{{year}}</span>{{/metadata}}</h1>
+
+   {{#metadata}}
+    <h3>{{crew directors writers}}</h3>
+    <p>{{overview}}</p>
+    <span class="genres">{{join genres}}</span>
+   {{/metadata}}
+
+   {{#scoring}}
+    <div class="scoring">
+     {{#imdb_score}}<img src="/assets/bullet_imdb.png"> {{.}}{{/imdb_score}}
+     {{#tomato_score}}<img src="/assets/bullet_rt.png"> {{.}} %{{/tomato_score}}
+     {{#metacritic_score}}<img src="/assets/bullet_mc.png"> {{.}} %{{/metacritic_score}}
+     {{#tmdb_score}}<img src="/assets/bullet_tmdb.png"> {{.}}{{/tmdb_score}}
+    </div>
+   {{/scoring}}
+  </div>
+
+  <div class="backside">
+   {{> offerings}}
+
+   <i class="zmdi zmdi-movie-alt update_metadata" title="Update metadata"></i>
+   <span class="links">
+    <a href="https://letterboxd.com/film/{{slug}}" target="_blank" title="Letterboxd">LB</a>
+    {{#ids.tmdb}}
+     | <a href="https://www.themoviedb.org/movie/{{.}}" target="_blank" title="TMDb">TMDb</a>
+    {{/ids.tmdb}}
+    {{#ids.imdb}}
+     | <a href="https://www.imdb.com/title/{{.}}" target="_blank" title="IMDb">IMDb</a>
+    {{/ids.imdb}}
+    {{#ids.tomato}}
+     | <a href="https://www.rottentomatoes.com/m/{{.}}" target="_blank" title="Rotten Tomatoes">RT</a>
+    {{/ids.tomato}}
+   </span>
+
+   {{#metadata}}
+    {{#../offerings_updated_str}}
+     <span class="offerings_updated">{{.}}</span>
+    {{/../offerings_updated_str}}
+    <i class="zmdi zmdi-ticket-star update_offerings" title="Update offerings"></i>
+   {{/metadata}}
+  </div>
+  
+ </div>
+</script>
+
+<!-- Template: Film -->
+<script id="film_card_offerings_template" type="x-tmpl-mustache">
+ {{#offerings}}
+  <div class="offerings">
+   {{#each this}}
+    <div class="provider {{join offer_types delimiter=" "}}">
+     <img src="/assets/provider_{{@key}}.png" title="{{name}}"><br>
+     {{#each offers}}
+      <span class="{{monetization_type}}"><a href="{{urls.standard_web}}" target="_blank">{{upper presentation_type}}{{#price}}:{{.}}kr{{/price}}</a></span>
+     {{/each}}
+    </div>
+   {{/each}}
+  </div>
+ {{/offerings}}
+</script>
+
+<!-- Template: Find metadata (modal) -->
+<script id="find_metadata_template" type="x-tmpl-mustache">
+ <h1>{{title}}</h1>
+ <h4>{{slug}}</h4>
+ <div class="films">
+  {{#films}}
+   <div class="film" data-tmdbid="{{id}}">
+    <h3>{{title}} ({{year}})<span>{{id}}</span></h3>
+    <p>{{overview}}</p>
+   </div>
+  {{/films}}
+ </div>
+</script>
+
+<!-- Template: Find offerings (modal) -->
+<script id="find_offerings_template" type="x-tmpl-mustache">
+ <h1>{{title}}</h1>
+ <h4>{{slug}}</h4>
+ <div class="films">
+  {{#films}}
+   <div class="film" data-justwatchid="{{id}}">
+    <h3>{{title}} ({{year}})<span>{{id}}</span></h3>
+    <p>{{overview}}</p>
+   </div>
+  {{/films}}
+ </div>
+</script>
+{% endraw %}{% endblock %}

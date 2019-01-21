@@ -1,0 +1,242 @@
+// String format
+String.prototype.format = function () {
+    var args = [].slice.call(arguments);
+    return this.replace(/(\{\d+\})/g, function (a){
+        return args[+(a.substr(1,a.length-2))||0];
+    });
+};
+
+Handlebars.registerHelper('join', function(items, block) {
+    var delimiter = block.hash.delimiter || ", ", 
+        start = start = block.hash.start || 0, 
+        len = items ? items.length : 0,
+        end = block.hash.end || len,
+        out = "";
+
+        if(end > len) end = len;
+
+    if ('function' === typeof block) {
+        for (i = start; i < end; i++) {
+            if (i > start) 
+                out += delimiter;
+            if('string' === typeof items[i])
+                out += items[i];
+            else
+                out += block(items[i]);
+        }
+        return out;
+    } else { 
+        return [].concat(items).slice(start, end).join(delimiter);
+    }
+});
+Handlebars.registerHelper('upper', function(str) {
+  return str.toUpperCase();
+});
+
+
+// WATCHLIST
+var WATCHLIST = WATCHLIST || {
+    // Options
+    options: {
+        name: 'WATCHLIST',
+    },
+
+    // Init
+    init: function() {
+        // Template
+        var source = $('#film_card_template').html();
+        var template = Handlebars.compile(source);
+
+        // Get films
+        $.getJSON('/json/watchlist/', function(data) {
+            $.each(data.result, function(slug, film) {
+                // Film card
+                film.slug = slug;
+
+                var card = new FilmCard(film);
+                
+                card.events.on('rendered', function(card) {
+                    $('.container').append(card.element.hide().fadeIn());
+                });
+
+                card.render(template);
+            });
+        });
+    }
+};
+
+
+vex.defaultOptions.className = 'vex-theme-watchlist'
+
+$(document).ready(WATCHLIST.init);
+
+/*
+$(document).ready(function() {
+    // Navigation
+    $('button[name="fade_no_offers"]').on('click', function() {
+        $('.card.nooffers').css({opacity: 0.3});
+    });
+    $('button[name="hide_no_offers"]').on('click', function() {
+        $('.card.nooffers').fadeOut();
+    });
+
+    $.getJSON('/json/watchlist/genres/', function(data) {
+        var genre_select = $('nav > select[name="genres"]');
+
+        $.each(data.result, function(genre, count) {
+            var genre_option = $('<option>').text(genre + ' ('+count+')');
+
+            genre_select.append(genre_option);
+        });
+
+        genre_select.on('change', function() {
+            // Filter by genre
+            var genre = $(this).val().split(' (')[0];
+
+            console.log('Filtering by genre, "'+genre+'"');
+
+            $('.card').each(function(i, card) {
+                var card = $(card);
+
+                if (genre === 'all') {
+                    card.fadeIn();
+                } else {
+                    var genres = card.find('span.genres').text().split(', ');
+                        
+                    if ($.inArray(genre, genres) < 0) {
+                        // console.log(genres);
+                        card.fadeOut();
+                    } else {
+                        card.fadeIn();
+                    }
+                }
+            });
+        });
+    });
+
+
+    // Backside
+    $('.card .backdrop').on('click', function(e) {
+        var card = $(this);
+        var details = card.find('.details');
+        var backside = card.find('.backside');
+
+        backside.toggleClass('minimized');
+
+    //     details.find('.scoring, .genres').hide();
+    //     details.animate({height: (details.hasClass('minimized') ? 170 : 44)}, 300, function() {
+    //         details.toggleClass('minimized');
+            
+    //         if (!details.hasClass('minimized')) {
+    //             details.find('.scoring, .genres').fadeIn();
+    //         }
+
+    //         backside.animate({height: (backside.hasClass('minimized') ? 110 : 0)}, 300, function() {
+
+    //         });
+    //     });
+    });
+
+
+    // Update metadata
+    $('.card i.zmdi.update_metadata').on('click', function(e) {
+        e.preventDefault();
+
+        var card = $(this).parent().parent();
+        var slug = card.data('slug');
+        var title = card.data('title');
+        
+        console.log('Identifying '+title+' ('+slug+')...');
+
+        var template = $('#find_metadata_template').first().html();
+
+        vex.open({
+            unsafeContent: 'Searching...',
+            afterOpen: function() {
+                var content = $(this.contentEl);
+                
+                $.getJSON('/json/watchlist/'+slug+'/metadata/find', function(data) {
+                    if (data.success) {
+                        var rendered = $(Mustache.render(template, {
+                            title: title,
+                            slug: slug,
+                            films: data.result.slice(0, 5),
+                        }));
+
+                        rendered.find('.film').on('click', function() {
+                            $(this).addClass('selected');
+                            var tmdb_id = $(this).data('tmdbid');
+
+                            $.getJSON('/json/watchlist/'+slug+'/metadata/update/'+tmdb_id+'/', function(data) {
+                                console.log(data);
+
+                                vex.closeAll();
+                            });
+
+                            rendered.find('.film').off('click');
+                        });
+
+                        content.html(rendered);
+                    }
+                });     
+            }
+        });
+    });
+
+    // Update offerings
+    $('.card i.zmdi.update_offerings, .card span.offerings_updated').on('click', function(e) {
+        e.preventDefault();
+
+        var card = $(this).parent().parent();
+        var slug = card.data('slug');
+        var title = card.data('title');
+        var tmdb_id = card.data('tmdbid');
+        
+        console.log('Identifying '+title+' ('+slug+')...');
+
+        var template = $('#find_offerings_template').first().html();
+
+        vex.open({
+            unsafeContent: 'Searching...',
+            afterOpen: function() {
+                var content = $(this.contentEl);
+                
+                $.getJSON('/json/watchlist/'+slug+'/offerings/find', function(data) {
+                    if (data.success) {
+                        $.each(data.result, function(i, film) {
+                            if (film.tmdb_id === tmdb_id) {
+                                $.getJSON('/json/watchlist/'+slug+'/offerings/update/'+film.id+'/', function(data) {
+                                    console.log(film);
+
+                                    vex.closeAll();
+                                });
+                            }
+                        });
+
+                        var rendered = $(Mustache.render(template, {
+                            title: title,
+                            slug: slug,
+                            films: data.result.slice(0, 5),
+                        }));
+
+                        rendered.find('.film').on('click', function() {
+                            $(this).addClass('selected');
+                            var justwatch_id = $(this).data('justwatchid');
+
+                            $.getJSON('/json/watchlist/'+slug+'/offerings/update/'+justwatch_id+'/', function(data) {
+                                console.log(data);
+
+                                vex.closeAll();
+                            });
+
+                            rendered.find('.film').off('click');
+                        });
+
+                        content.html(rendered);
+                    }
+                });     
+            }
+        });
+    });
+});
+*/

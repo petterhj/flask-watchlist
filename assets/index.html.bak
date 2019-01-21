@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+ <nav>
+  <button name="fade_no_offers">Fade no offers</button>
+  <button name="hide_no_offers">Hide no offers</button>
+
+  <select name="genres">
+   <option value="all">All genres</option>
+  </select>
+ </nav>
+
+ <div class="container">
+  {% for slug, film in films.iteritems() %}
+
+    <!-- Film -->
+    <div class="card {%if film.metadata%}has_metadata{%endif%} {%if not film.metadata%}nobackdrop{%endif%} {%if not film.offerings%}nooffers{%endif%}" data-slug="{{slug}}" data-title="{{film.title}}" data-tmdbid="{{film.ids.tmdb}}">
+
+     <!-- Backdrop -->
+     <div class="backdrop" style="{%if film.metadata%}background-image: url('{{ url_for('film_backdrop', slug=slug) }}');{%endif%}">
+     </div>
+
+     <!-- Details -->
+     <div class="details">
+      <h1>{{film.title}}{% if film.metadata %}<span>{% if film.metadata.year %}{{ film.metadata.year }}{% endif %}</span>{% endif %}</h1>
+      {% if film.metadata %}
+       <h3>{{ film.metadata.directors|join(', ') }}{% if film.metadata.writers %} + {{ film.metadata.writers|join(', ') }}{% endif %}</h3>
+       <p>{{ film.metadata.overview|truncate(250) }}</p>
+       <span class="genres">{{ film.metadata.genres|join(', ') }}</span>
+      {% endif %}
+
+      <!-- Scoring -->
+      {% if film.scoring %}
+       <div class="scoring">
+        {% if film.scoring.imdb_score %}
+         <img src="{{url_for('static', filename='bullet_imdb.png')}}"> {{film.scoring.imdb_score}}
+        {% endif %}
+        {% if film.scoring.tomato_meter %}
+         <img src="{{url_for('static', filename='bullet_rt.png')}}"> {{film.scoring.tomato_meter}} %
+        {% endif %}
+        {% if film.scoring.metacritic_score %}
+         <img src="{{url_for('static', filename='bullet_mc.png')}}"> {{film.scoring.metacritic_score}} %
+        {% endif %}
+        {% if film.scoring.tmdb_score %}
+         <img src="{{url_for('static', filename='bullet_tmdb.png')}}"> {{film.scoring.tmdb_score}}
+        {% endif %}
+       </div>
+      {% endif %}
+     </div>
+
+     <!-- Backside -->
+     <div class="backside">
+      <!-- Offerings -->
+      {% if film.offerings %}
+       <div class="offerings">
+        {% for pid, provider in film.offerings.iteritems() %}
+          <div class="provider {{provider.offer_types|join(' ')}}">
+           <img src="{{url_for('static', filename='')}}provider_{{pid}}.png" title="{{provider.name}}"><br>
+           {% for offer in provider.offers %}
+            {% if offer.monetization_type != "buy" %}
+             <span class="{{offer.monetization_type}}"><a href="{{offer.urls.standard_web}}" target="_blank">{{ offer.presentation_type|upper }}{% if offer.price %}:{{ offer.price }}kr{% endif %}</a></span><br>
+            {% endif %}
+           {% endfor %}
+          </div>
+        {% endfor %}
+       </div>
+      {% endif %}
+
+      <i class="zmdi zmdi-movie-alt update_metadata" title="Update metadata"></i>
+      <span class="links">
+       <a href="https://letterboxd.com/film/{{slug}}" target="_blank" title="Letterboxd">LB</a>
+       {% if film.ids.tmdb %}
+        | <a href="https://www.themoviedb.org/movie/{{film.ids.tmdb}}" target="_blank" title="TMDb">TMDb</a>
+       {% endif %}
+       {% if film.ids.imdb %}
+        | <a href="https://www.imdb.com/title/{{film.ids.imdb}}" target="_blank" title="IMDb">IMDb</a>
+        {% endif %}
+        {% if film.ids.tomato %}
+        | <a href="https://www.rottentomatoes.com/m/{{film.ids.tomato}}" target="_blank" title="Rotten Tomatoes">RT</a>
+        {% endif %}
+      </span>
+      {% if film.metadata %}
+       {% if film.offerings_updated_str %}
+        <span class="offerings_updated">{{film.offerings_updated_str}}</span>
+       {% endif %}
+       <i class="zmdi zmdi-ticket-star update_offerings" title="Update offerings"></i>
+      {% endif %}
+     </div>
+
+           <!-- Links -->
+      <!--
+      <span class="links">
+       <a href="https://letterboxd.com/film/{{slug}}" target="_blank">LB</a>
+       {% if film.metadata %}
+        {% if film.ids.imdb %}
+        | <a href="https://www.imdb.com/title/{{film.ids.imdb}}" target="_blank">IMDb</a>
+        {% endif %}
+        
+       {% endif %}
+      </span>
+     -->
+    </div>
+    
+  {% endfor %}
+ </div>
+{% endblock %}
+
+{% block templates %}
+<!-- Template: Find metadata (modal) -->
+<script id="find_metadata_template" type="x-tmpl-mustache">
+ <h1>[[title]]</h1>
+ <h4>[[slug]]</h4>
+ <div class="films">
+  [[#films]]
+   <div class="film" data-tmdbid="[[id]]">
+    <h3>[[title]] ([[year]])<span>[[id]]</span></h3>
+    <p>[[overview]]</p>
+   </div>
+  [[/films]]
+ </div>
+</script>
+
+<!-- Template: Find offerings (modal) -->
+<script id="find_offerings_template" type="x-tmpl-mustache">
+ <h1>[[title]]</h1>
+ <h4>[[slug]]</h4>
+ <div class="films">
+  [[#films]]
+   <div class="film" data-justwatchid="[[id]]">
+    <h3>[[title]] ([[year]])<span>[[id]]</span></h3>
+    <p>[[overview]]</p>
+   </div>
+  [[/films]]
+ </div>
+</script>
+{% endblock %}

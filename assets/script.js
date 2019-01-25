@@ -55,6 +55,13 @@ var WATCHLIST = WATCHLIST || {
         $('button[name="sync_watchlish"]').on('click', function() {
             console.log('Syncing watchlist');
 
+            new Noty({
+                type: 'info',
+                layout: 'topRight',
+                timeout: 5000,
+                text: 'Syncing watchlist...'
+            }).show();
+
             $.getJSON('/json/watchlist/sync/', function(data) {
                 if (data.success) {
                     console.log('Done syncing');

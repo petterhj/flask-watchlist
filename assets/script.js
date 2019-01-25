@@ -65,12 +65,26 @@ var WATCHLIST = WATCHLIST || {
                         var card = WATCHLIST.container.find('.card[data-slug="{0}"]'.format(slug))
                         console.log(card);
                         card.fadeOut();
+
+                        new Noty({
+                            type: 'error',
+                            layout: 'topRight',
+                            timeout: 2000,
+                            text: 'Removed {0}'.format(slug)
+                        }).show();
                     });
 
                     // Add new filmes
                     $.each(data.result.new, function(i, slug) {
                         console.log('Adding {0}'.format(slug));
-                        WATCHLIST.add_film(slug);
+                        WATCHLIST.add_film(slug, {});
+
+                        new Noty({
+                            type: 'success',
+                            layout: 'topRight',
+                            timeout: 2000,
+                            text: 'Added {0}'.format(slug)
+                        }).show();
                     });
                 }
             });

@@ -90,6 +90,34 @@ var WATCHLIST = WATCHLIST || {
             });
         });
 
+        // Update offerings
+        $('button[name="update_offerings"]').on('click', function() {
+            console.log('Updating offerings');
+
+            $.getJSON('/json/watchlist/offerings/update/', function(data) {
+                if (data.success) {
+                    console.log('Done updating');
+
+                    $.each(data.result, function(slug, result) {
+                        console.log('Updated {0}'.format(slug));
+
+                        var offerings = '';
+
+                        $.each(result.result, function(i, offer) {
+                            offerings += offer['name'] + ' ';
+                        });
+
+                        new Noty({
+                            type: 'info',
+                            layout: 'topRight',
+                            timeout: 5000,
+                            text: 'Updated {0}: {1}'.format(slug, offerings)
+                        }).show();
+                    });
+                }
+            });
+        });
+
         // Provider
         var provider_select = $('nav > select[name="providers"]');
 

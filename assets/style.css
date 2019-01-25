@@ -13,6 +13,7 @@ nav > select {
   cursor: pointer; padding: 2px 4px;
 }
 nav > button[name="sync_watchlish"] { float: right; }
+nav > button[name="update_offerings"] { float: right; }
 
 .container {
   padding: 10px 0;

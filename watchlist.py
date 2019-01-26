@@ -42,6 +42,7 @@ def json_request(f, *args, **kw):
     return response
 
 
+
 # Class: Watchlist
 class Watchlist(object):
     # Init
@@ -160,11 +161,14 @@ class Watchlist(object):
             year = film.get('release_date')
             year = int(year.split('-')[0]) if year else None
 
+            overview = film.get('overview', '')
+            overview = overview[0:200] + '...' if len(overview) > 200 else overview
+
             results.append({
                 'id': film.get('id'),
                 'title': film.get('title'),
                 'year': year,
-                'overview': film.get('overview')
+                'overview': overview
             })
 
         return results
@@ -196,13 +200,16 @@ class Watchlist(object):
             for scoring in film.get('scoring', []):
                 if scoring['provider_type'] == 'tmdb:id':
                     tmdb_id = scoring['value']
+
+            overview = film.get('short_description', '')
+            overview = overview[0:200] + '...' if len(overview) > 200 else overview
             
             results.append({
                 'id': film.get('id'),
                 'title': film.get('title'),
                 'original_title': film.get('original_title'),
                 'year': film.get('original_release_year'),
-                'overview': film.get('short_description'),
+                'overview': overview,
                 'tmdb_id': tmdb_id
             })
 
@@ -231,7 +238,7 @@ class Watchlist(object):
 
         details = self.tmdb.details(tmdb_id)
 
-        if not details:
+        if not details or details.get('status_code'):
             raise Exception('No metadata found for %s' % (slug))
 
         # Parse TMDb details
@@ -303,6 +310,7 @@ class Watchlist(object):
             print dumps(justwatch, indent=4)
             offers = justwatch.get('offers', [])
             justwatch_id = justwatch['id']
+            justwatch_url = justwatch.get('full_paths', {}).get('MOVIE_DETAIL_OVERVIEW')
         except:
             logger.exception('No offerings found for "%s" using JustWatch id=%s' % (slug, justwatch_id))
             return {}
@@ -339,13 +347,31 @@ class Watchlist(object):
             # Scoring
             tomato_id = None
             scoring = {}
+            average_score = None
+            scores = []
             
             for score in justwatch.get('scoring', []):
                 if ':id' not in score['provider_type']:
-                    scoring[score['provider_type'].replace(':', '_')] = score['value']
+                    key = score['provider_type'].replace(':', '_')
+                    scoring[key] = score['value']
+
+                    if key == 'imdb_score':
+                        scores.append(float(score['value']))
+                    if key == 'tmdb_score':
+                        scores.append(float(score['value']))
+                    if key == 'tomato_score':
+                        scores.append((float(score['value']) / 10))
+                    if key == 'metacritic_score':
+                        scores.append((float(score['value']) / 10))
 
                 if score['provider_type'] == 'tomato:id':
                     tomato_id = score['value']
+
+            # Calculate average
+            if len(scores) > 0:
+                average_score = (float(sum(scores)) / len(scores))
+                average_score = round(average_score, 2)
+
         except:
             logger.exception('Could not parse metadata for %s' % (slug))
             return {}
@@ -359,7 +385,9 @@ class Watchlist(object):
         self.films[slug]['offerings'] = offerings
         self.films[slug]['offerings_updated'] = time()
         self.films[slug]['offerings_updated_str'] = datetime.now().strftime('%Y-%m-%d')
+        self.films[slug]['justwatch_url'] = justwatch_url
         self.films[slug]['scoring'] = scoring
+        self.films[slug]['scoring']['average'] = average_score
         self.save()
 
 
@@ -399,16 +427,16 @@ class Watchlist(object):
         # Update
         for slug, film in queue.iteritems():
             # Update offerings
-            offers = []
+            # offers = []
             result = self.update_offerings(slug, film.get('justwatch_id')).get('result')
 
-            for provider_id, provider in result.iteritems():
-                offers.append({
-                    'name': provider.get('name'),
-                    'offers': provider.get('offer_types'),
-                })
+            # for provider_id, provider in result.iteritems():
+            #     offers.append({
+            #         'name': provider.get('name'),
+            #         'offers': provider.get('offer_types'),
+            #     })
 
-            queue[slug]['result'] = offers
+            queue[slug]['result'] = result
 
 
         return queue

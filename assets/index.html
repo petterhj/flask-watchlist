@@ -3,7 +3,7 @@
 {% block content %}
 <!-- Navigation -->
  <nav>
-  <select name="providers">
+  <select name="provider_filter">
    <option value="all">All providers</option>
    {% for pid, name in providers.iteritems() %}
     <option value="{{pid}}">{{ name }}</option>
@@ -13,12 +13,24 @@
   <button name="fade_no_offers">Fade no offers</button>
   <button name="hide_no_offers">Hide no offers</button>
 
-  <select name="genres">
+  <select name="genre_filter">
    <option value="all">All genres</option>
    {% for genre, count in genres.iteritems() %}
     <option>{{ genre }} ({{ count }})</option>
    {% endfor %}
   </select>
+
+  <select name="score_filter">
+   <option value="all">All scores</option>
+   <option value="5"><= 5.0</option>
+   <option value="5">>= 5.0</option>
+   <option value="6">>= 6.0</option>
+   <option value="7">>= 7.0</option>
+   <option value="8">>= 8.0</option>
+   <option value="9">>= 9.0</option>
+  </select>
+
+  <button name="reset_filter">Reset filters</button>
   
   <button name="shuffle">Shuffle</button>
 
@@ -48,11 +60,12 @@
    {{/metadata}}
 
    {{#scoring}}
-    <div class="scoring">
+    <div class="scoring" data-average-score="{{average}}">
      {{#imdb_score}}<img src="/assets/bullet_imdb.png"> {{.}}{{/imdb_score}}
      {{#tomato_score}}<img src="/assets/bullet_rt.png"> {{.}} %{{/tomato_score}}
      {{#metacritic_score}}<img src="/assets/bullet_mc.png"> {{.}} %{{/metacritic_score}}
      {{#tmdb_score}}<img src="/assets/bullet_tmdb.png"> {{.}}{{/tmdb_score}}
+     {{#average}}<span class="average">{{.}}</span>{{/average}}
     </div>
    {{/scoring}}
   </div>
@@ -72,12 +85,13 @@
     {{#ids.tomato}}
      | <a href="https://www.rottentomatoes.com/m/{{.}}" target="_blank" title="Rotten Tomatoes">RT</a>
     {{/ids.tomato}}
+    {{#justwatch_url}}
+     | <a href="https://www.justwatch.com{{.}}" target="_blank" title="JustWatch">JW</a>
+    {{/justwatch_url}}
    </span>
 
    {{#metadata}}
-    {{#../offerings_updated_str}}
-     <span class="offerings_updated">{{.}}</span>
-    {{/../offerings_updated_str}}
+    <span class="offerings_updated">{{../offerings_updated_str}}</span>
     <i class="zmdi zmdi-ticket-star update_offerings" title="Update offerings"></i>
    {{/metadata}}
   </div>
@@ -85,12 +99,12 @@
  </div>
 </script>
 
-<!-- Template: Film -->
+<!-- Template: Offerings (partial) -->
 <script id="film_card_offerings_template" type="x-tmpl-mustache">
  {{#offerings}}
   <div class="offerings">
    {{#each this}}
-    <div class="provider {{join offer_types delimiter=" "}}">
+    <div class="provider {{join offer_types delimiter=" "}}" data-provider-id="{{@key}}">
      <img src="/assets/provider_{{@key}}.png" title="{{name}}"><br>
      {{#each offers}}
       <span class="{{monetization_type}}"><a href="{{urls.standard_web}}" target="_blank">{{upper presentation_type}}{{#price}}:{{.}}kr{{/price}}</a></span>
@@ -112,6 +126,9 @@
     <p>{{overview}}</p>
    </div>
   {{/films}}
+ </div>
+ <div class="manual">
+  <input type="text" name="tmdb_id" placeholder="TMDb ID"><button name="submit_manual">Submit</button>
  </div>
 </script>
 

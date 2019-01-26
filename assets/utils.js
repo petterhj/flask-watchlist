@@ -6,6 +6,11 @@ String.prototype.format = function () {
     });
 };
 
+// Array diff
+Array.prototype.diff = function(a) {
+    return this.filter(function(i) {return a.indexOf(i) < 0;});
+};
+
 // Handlebars: Join helper
 Handlebars.registerHelper('join', function(items, block) {
     var delimiter = block.hash.delimiter || ", ", 

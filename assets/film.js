@@ -3,6 +3,7 @@ var EventBus = function() {
     this.events = {};
 
     this.on = function(event, cb) {
+        console.log('Event fired: {0}'.format(event));
         event = this.events[event] = this.events[event] || [];
         event.push(cb);
     }
@@ -36,20 +37,29 @@ var FilmCard = function(watchlist, film) {
 
     // Render
     this.render = function(target) {
+        console.log('Rendering film card for {0}'.format(this.film.slug));
+
         // Render template
+        this.film.offerings = (this.film.offerings ? this.film.offerings : {});
         this.element = $(this.watchlist.templates.card(this.film));
 
         // Refresh if exists
         var existing_element = target.find('.card[data-slug="{0}"]'.format(this.film.slug))
 
+        console.log('> Exists: {0}'.format(existing_element.length));
+
         if (existing_element.length === 0) {
             // Append
+            console.log('Appending as new card');
+            
             target.append(this.element.hide().fadeIn());
-        } else {
-            console.log('REFRESHING')
+        } 
+        else {
+            // Refresh
+            console.log('Refreshing existing card');
             console.log(existing_element);
             console.log(this.element);
-            // Refresh
+
             existing_element.fadeOut('slow', $.proxy(function(){
                 this.element.hide();
                 existing_element.replaceWith(this.element);
@@ -80,6 +90,21 @@ var FilmCard = function(watchlist, film) {
                 // Identify
                 $.getJSON('/json/watchlist/{0}/metadata/find'.format(context.film.slug), function(data) {
                     if (data.success) {
+                        // Check result count
+                        if (data.result.length === 0) {
+                            vex.closeAll();
+
+                            // Notification
+                            new Noty({
+                                type: 'warning',
+                                layout: context.watchlist.options.notification_position,
+                                timeout: 2000,
+                                text: 'Could not find "{0}"'.format(context.film.title)
+                            }).show();
+
+                            return false;
+                        }
+
                         var rendered = $(template({
                             title: context.film.title,
                             slug: context.film.slug,
@@ -101,10 +126,48 @@ var FilmCard = function(watchlist, film) {
                                 } else {
                                     console.log('Metadata update failed, slug = {0}'.format(context.film.slug));
                                     console.log(data.message);
+
+                                    new Noty({
+                                        type: 'error',
+                                        layout: WATCHLIST.options.notification_position,
+                                        timeout: 2000,
+                                        text: 'Could not update metadata'
+                                    }).show();
                                 }
                             });
 
                             rendered.find('.film').off('click');
+                        });
+
+                        rendered.find('button[name="submit_manual"]').on('click', function() {
+                            var tmdb_id = rendered.find('input[name="tmdb_id"]').val();
+
+                            if (tmdb_id) {
+                                console.log('Using manually provided TMDb ID = {0}'.format(tmdb_id));
+
+                                // Update metadata
+                                $.getJSON('/json/watchlist/{0}/metadata/update/{1}/'.format(context.film.slug, tmdb_id), function(data) {
+                                    if (data.success) {
+                                        // Emit event
+                                        context.events.emit('metadataupdated', context, data.result);
+
+                                        // Close modal
+                                        vex.closeAll();
+                                    } else {
+                                        console.log('Metadata update failed, slug = {0}'.format(context.film.slug));
+                                        console.log(data.message);
+
+                                        new Noty({
+                                            type: 'error',
+                                            layout: WATCHLIST.options.notification_position,
+                                            timeout: 2000,
+                                            text: 'Could not update metadata'
+                                        }).show();
+                                    }
+                                });
+
+                                $(this).off('click').prop('disabled', true);
+                            }
                         });
 
                         content.html(rendered);
@@ -129,21 +192,9 @@ var FilmCard = function(watchlist, film) {
                 if (data.success) {
                     console.log(data.result);
 
-                    // Refresh card
-                    var partial = context.watchlist.templates.card_offerings;
-                    var rendered = $(partial({
-                        offerings: data.result
-                    }));
-                    
-                    var offerings = context.element.find('div.offerings');
+                    context.refresh_offerings(data.result);
 
-                    offerings.fadeOut('slow', $.proxy(function(){
-                        rendered.hide();
-                        offerings.replaceWith(rendered);
-                        rendered.fadeIn('slow');
-                    }, this));
-
-                    context.element.find('span.offerings_updated').text(dateFormat(new Date(), 'yyyy-mm-dd'));
+                    context.film.offerings = data.result;
                 } else {
                     console.log('Offerings update failed');
                 }
@@ -167,6 +218,22 @@ var FilmCard = function(watchlist, film) {
                     // Identify
                     $.getJSON('/json/watchlist/{0}/offerings/find'.format(context.film.slug), function(data) {
                         if (data.success) {
+                            // Check result count
+                            if (data.result.length === 0) {
+                                vex.closeAll();
+
+                                // Notification
+                                new Noty({
+                                    type: 'warning',
+                                    layout: context.watchlist.options.notification_position,
+                                    timeout: 2000,
+                                    text: 'Could not find "{0}"'.format(context.film.title)
+                                }).show();
+
+                                return false;
+                            }
+
+                            // Results
                             var rendered = $(template({
                                 title: context.film.title,
                                 slug: context.film.slug,
@@ -176,6 +243,7 @@ var FilmCard = function(watchlist, film) {
                             rendered.find('.film').on('click', function() {
                                 // Update offerings
                                 $(this).addClass('selected');
+
                                 var justwatch_id = $(this).data('justwatchid');
 
                                 $.getJSON('/json/watchlist/{0}/offerings/update/{1}/'.format(
@@ -184,21 +252,10 @@ var FilmCard = function(watchlist, film) {
                                     if (data.success) {
                                         console.log(data.result);
 
-                                        // Refresh card
-                                        var partial = context.watchlist.templates.card_offerings;
-                                        var rendered = $(partial({
-                                            offerings: data.result
-                                        }));
-                                        
-                                        var offerings = context.element.find('div.offerings');
+                                        context.refresh_offerings(data.result);
 
-                                        offerings.fadeOut('slow', $.proxy(function(){
-                                            rendered.hide();
-                                            offerings.replaceWith(rendered);
-                                            rendered.fadeIn('slow');
-                                        }, this));
-
-                                        context.element.find('span.offerings_updated').text(dateFormat(new Date(), 'yyyy-mm-dd'));
+                                        context.film.offerings = data.result;
+                                        context.film.ids.justwatch = justwatch_id;
 
                                         vex.closeAll();
                                     } else {
@@ -215,6 +272,91 @@ var FilmCard = function(watchlist, film) {
                 }
             });
         }
+    };
+
+    // Refresh offerings
+    this.refresh_offerings = function(offerings) {
+        // Compare offerings
+        var new_provider_ids = this.compare_offerings(offerings);
+
+        console.log('Refreshing offerings, slug = {0}'.format(this.film.slug));
+        console.log('> Offerings: {0} ({1})'.format(Object.keys(offerings).length, Object.keys(offerings)));
+
+        // Render offerings partial
+        var partial = this.watchlist.templates.card_offerings;
+        var rendered = $(partial({
+            offerings: offerings
+        }));
+        
+        $.each(new_provider_ids, function(i, provider_id) {
+            rendered.find('div.provider[data-provider-id="{0}"]'.format(provider_id)).addClass('new');
+        });
+
+        // Replace existing offerings
+        var offerings = this.element.find('div.offerings');
+
+        offerings.fadeOut('slow', $.proxy(function(){
+            rendered.hide();
+            offerings.replaceWith(rendered);
+            rendered.fadeIn('slow');
+        }, this));
+
+        this.element.find('span.offerings_updated').text(dateFormat(new Date(), 'yyyy-mm-dd'));
+
+        // Mark as updated
+        this.element.addClass('updated');
+
+        // Emit event
+        this.events.emit('offeringsupdated', this, offerings);
+    };
+
+    // Compare offerings
+    this.compare_offerings = function(offerings) {
+        var current_offerings = {};
+
+        if (this.film.offerings) {
+            current_offerings = this.film.offerings;
+        }
+
+        var current_providers_ids = Object.keys(current_offerings);
+        var updated_provider_ids = Object.keys(offerings);
+        var new_provider_ids = updated_provider_ids.diff(current_providers_ids);
+        
+        console.log('Comparing offerings, slug = {0}'.format(this.film.slug));
+        console.log('> Current providers: {0} ({1})'.format(current_providers_ids.length, current_providers_ids));
+        console.log('> Updated providers: {0} ({1})'.format(updated_provider_ids.length, updated_provider_ids));
+        console.log('> New providers: {0} ({1})'.format(new_provider_ids.length, new_provider_ids));
+
+        // Return any new providers ids
+        return new_provider_ids;
+    };
+
+    // Go to (focus)
+    this.go_to = function() {
+        console.log('Focusing film card, slug = {0}'.format(this.film.slug));
+
+        this.watchlist.container.find('.card').removeClass('focused');
+
+        $([document.documentElement, document.body]).animate({
+            scrollTop: (this.element.offset().top - 50)
+        }, 1500);
+
+        this.element.addClass('focused');
+    };
+
+    // Move
+    this.move = function(position) {
+        // Move element
+        this.element.fadeOut('slow', $.proxy(function(){
+            if ((!position) || (position === 'top')) {
+                this.element.prependTo(this.watchlist.container);
+            }
+            if (position === 'bottom') {
+                this.element.appendTo(this.watchlist.container);
+            }
+            
+            this.element.fadeIn();
+        }, this));
     };
 
 
@@ -247,11 +389,34 @@ var FilmCard = function(watchlist, film) {
         */
         
         console.log('Metadata updated, slug = {0}'.format(card.film.slug));
-        
-        
+         
         card.film.metadata = result;
 
         card.render(card.watchlist.container);
         
+        // Notification
+        new Noty({
+            type: 'info',
+            layout: card.watchlist.options.notification_position,
+            timeout: 2500,
+            text: 'Updated metadata for "{0}"'.format(card.film.title)
+        }).show();
+    });
+
+    // Offerings updated
+    this.events.on('offeringsupdated', function(card, result) {
+        /*
+            Fired after film offerings is updated.
+        */
+
+        console.log('Offerings updated, slug = {0}'.format(card.film.slug));
+
+        // Notification
+        new Noty({
+            type: 'info',
+            layout: card.watchlist.options.notification_position,
+            timeout: 2500,
+            text: 'Updated offerings for "{0}"'.format(card.film.title)
+        }).show();
     });
 };

@@ -55,6 +55,7 @@ class Watchlist(object):
 
         # Load cached watchlist films
         self.films = self.load()
+        self.size = len(self.films)
 
 
     # Load

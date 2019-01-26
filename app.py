@@ -22,6 +22,7 @@ wl = Watchlist()
 @app.route('/')
 def index():
     return render_template('index.html', **{
+        'watchlist_size': wl.size,
         'providers': wl.providers().get('result', {}),
         'genres': wl.genres().get('result', {}),
     })

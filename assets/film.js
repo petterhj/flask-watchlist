@@ -51,19 +51,18 @@ var FilmCard = function(watchlist, film) {
         if (existing_element.length === 0) {
             // Append
             console.log('Appending as new card');
-            
-            target.append(this.element.hide().fadeIn());
+            this.hide(0);
+            target.append(this.element);
+            this.show();
         } 
         else {
             // Refresh
             console.log('Refreshing existing card');
-            console.log(existing_element);
-            console.log(this.element);
 
             existing_element.fadeOut('slow', $.proxy(function(){
-                this.element.hide();
+                this.hide(0);
                 existing_element.replaceWith(this.element);
-                this.element.fadeIn('slow');
+                this.show();
             }, this));
         }
 
@@ -344,10 +343,36 @@ var FilmCard = function(watchlist, film) {
         this.element.addClass('focused');
     };
 
+    // Hide
+    this.hide = function(duration) {
+        if (duration === undefined) {
+            duration = 400;
+        }
+        
+        this.element.fadeOut(duration, function() {
+            WATCHLIST.update_counter();
+        });
+        
+        return this.element;
+    };
+
+    // Show
+    this.show = function(duration) {
+        if (!duration) {
+            duration = 400;
+        }
+        
+        this.element.fadeIn(duration, function() {
+            WATCHLIST.update_counter();
+        });
+
+        return this.element;
+    };
+
     // Move
     this.move = function(position) {
         // Move element
-        this.element.fadeOut('slow', $.proxy(function(){
+        this.element.fadeOut('fast', $.proxy(function(){
             if ((!position) || (position === 'top')) {
                 this.element.prependTo(this.watchlist.container);
             }
@@ -355,7 +380,7 @@ var FilmCard = function(watchlist, film) {
                 this.element.appendTo(this.watchlist.container);
             }
             
-            this.element.fadeIn();
+            this.element.show();
         }, this));
     };
 

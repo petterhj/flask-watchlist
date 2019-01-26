@@ -10,8 +10,7 @@
    {% endfor %}
   </select>
 
-  <button name="fade_no_offers">Fade no offers</button>
-  <button name="hide_no_offers">Hide no offers</button>
+  <!-- <button name="fade_no_offers">Fade no offers</button> -->
 
   <select name="genre_filter">
    <option value="all">All genres</option>
@@ -22,17 +21,21 @@
 
   <select name="score_filter">
    <option value="all">All scores</option>
-   <option value="5"><= 5.0</option>
-   <option value="5">>= 5.0</option>
-   <option value="6">>= 6.0</option>
-   <option value="7">>= 7.0</option>
-   <option value="8">>= 8.0</option>
-   <option value="9">>= 9.0</option>
+   <option><= 5.0</option>
+   <option>>= 5.0</option>
+   <option>>= 6.0</option>
+   <option>>= 7.0</option>
+   <option>>= 8.0</option>
+   <option>>= 9.0</option>
   </select>
 
+  <button name="hide_no_offers">Hide no offers</button>
+  
   <button name="reset_filter">Reset filters</button>
   
   <button name="shuffle">Shuffle</button>
+
+  <div class="counter"><span class="visible">0</span> / {{ watchlist_size }}</div>
 
   <button name="update_offerings">Update offerings</button>
   <button name="sync_watchlish">Sync watchlist</button>

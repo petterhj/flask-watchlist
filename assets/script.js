@@ -4,7 +4,7 @@ var WATCHLIST = WATCHLIST || {
     options: {
         name: 'WATCHLIST',
         notification_position: 'bottomRight',
-        max_films: 99999
+        max_films: 15//9999
     },
 
     // Container
@@ -20,6 +20,9 @@ var WATCHLIST = WATCHLIST || {
 
     // Films
     films: [],
+
+    // Filters
+    filters: {},
 
     // Init
     init: function() {
@@ -59,16 +62,54 @@ var WATCHLIST = WATCHLIST || {
         });
 
         // Filter: Provider
-        $('nav > select[name="provider_filter"]').on('change', WATCHLIST.filter.provider);
+        $('nav > select[name="provider_filter"]').on('change', function() {
+            var provider = $(this).val();
+            if (provider === 'all') {
+                delete WATCHLIST.filters.provider;
+            } else {
+                WATCHLIST.filters.provider = provider;
+            }
+            WATCHLIST.apply_filters();
+        });
+
+        // Filter: Offerings
+        $('nav > button[name="hide_no_offers"]').on('click', function() {
+            if (WATCHLIST.filters.offerings === undefined || WATCHLIST.filters.offerings === false) {
+                WATCHLIST.filters.offerings = true;
+                $(this).text('Show no offers');
+            } else {
+                WATCHLIST.filters.offerings = false;
+                $(this).text('Hide no offers');
+            }
+             
+            WATCHLIST.apply_filters();
+        });
 
         // Filter: Genre
-        $('nav > select[name="genre_filter"]').on('change', WATCHLIST.filter.genre);
+        $('nav > select[name="genre_filter"]').on('change', function() {
+            var genre = $(this).val().split(' (')[0];
+            if (genre === 'all') {
+                delete WATCHLIST.filters.genre;
+            } else {
+                WATCHLIST.filters.genre = genre;
+            }
+            WATCHLIST.apply_filters();
+        });
 
         // Filter: Score
-        $('nav > select[name="score_filter"]').on('change', WATCHLIST.filter.score);
+        $('nav > select[name="score_filter"]').on('change', function() {
+            var score = $(this).val();
+            console.log(score);
+            if (score === 'all') {
+                delete WATCHLIST.filters.score;
+            } else {
+                WATCHLIST.filters.score = score;
+            }
+            WATCHLIST.apply_filters();
+        });
 
-        // Filter: Reset
-        $('nav > button[name="reset_filter"]').on('click', WATCHLIST.filter.reset);
+        // Reset filters
+        $('nav > button[name="reset_filter"]').on('click', WATCHLIST.reset_filters);
 
         // Shuffle
         $('nav > button[name="shuffle"]').on('click', WATCHLIST.shuffle);
@@ -108,7 +149,7 @@ var WATCHLIST = WATCHLIST || {
                     
                     var card = WATCHLIST.container.find('.card[data-slug="{0}"]'.format(slug))
                     
-                    card.fadeOut();
+                    card.hide();
 
                     new Noty({
                         type: 'error',
@@ -196,114 +237,160 @@ var WATCHLIST = WATCHLIST || {
     // Filter
     filter: {
         // Provider
-        provider: function(event) {
-            var provider = $(this).val();
-            
-            // Reset other filters
-            WATCHLIST.filter.reset();
-            $(this).val(provider);
+        provider: function(films, provider_id) {
+            var result = [];
 
-            // Filter by provider
-            console.log('Filtering by provider = {0}'.format(provider));
-            
-            if (provider === 'all') {
-                $.each(WATCHLIST.films, function(i, card) {
-                    card.element.fadeIn();
-                });                
-                return;
-            }
-
-            $.each(WATCHLIST.films, function(i, card) {
+            $.each(films, function(i, card) {
                 if (card.film.offerings) {
                     var provider_ids = Object.keys(card.film.offerings);
 
-                    if ($.inArray(provider, provider_ids) === -1) {
-                        card.element.fadeOut();
-                    } else {
-                        card.element.fadeIn();
+                    if ($.inArray(provider_id, provider_ids) >= 0) {
+                        result.push(card);
                     }
-                } else {
-                    card.element.fadeOut();
                 }
             });
+
+            return result;
+        },
+
+        // Offerings
+        offerings: function(films, has_offerings) {
+            if (!has_offerings) {
+                return films;
+            }
+
+            var result = [];
+
+            $.each(films, function(i, card) {
+                if (card.film.offerings && Object.keys(card.film.offerings).length > 0) {
+                    result.push(card);
+                }
+            });
+
+            return result;
         },
 
         // Genre
-        genre: function(event) {
-            var org_val = $(this).val();
-            var genre = org_val.split(' (')[0];
-
-            // Reset other filters
-            WATCHLIST.filter.reset();
-            $(this).val(org_val);
-
-            // Filter by genre
-            console.log('Filtering by genre = {0}'.format(genre));
-
-            $.each(WATCHLIST.films, function(i, card) {
-                if (genre === 'all') {
-                    card.element.fadeIn();
-                } else {
-                    var genres = card.element.find('span.genres').text().split(', ');
-                        
-                    if ($.inArray(genre, genres) < 0) {
-                        card.element.fadeOut();
-                    } else {
-                        card.element.fadeIn();
-                    }
+        genre: function(films, genre) {
+            var result = [];
+            
+            $.each(films, function(i, card) {
+                var genres = card.element.find('span.genres').text().split(', ');
+                    
+                if ($.inArray(genre, genres) >= 0) {
+                    result.push(card);
                 }
             });
+
+            return result;
         },
 
         // Score
-        score: function(event) {
-            var score = $(this).val();
-            var operator = $(this).find('option:selected').text().split(' ')[0];
+        score: function(films, score) {
+            var result = [];
 
-            // Reset other filters
-            // WATCHLIST.filter.reset();
-            // $(this).val(score);
-
-            // Filter by score
-            console.log('Filtering by score {0} {1}'.format(operator, score));
-
-            $.each(WATCHLIST.films, function(i, card) {
-                if (score === 'all') {
-                    card.element.fadeIn();
-                } else {
-                    try {
-                        var qualifier = card.film.scoring.average >= parseInt(score);
-                        if (operator == '<=') {
-                            qualifier = card.film.scoring.average <= parseInt(score);
-                        }
-
-                        if (card.film.scoring.average && (qualifier)) {
-                            card.element.fadeIn();
-                        } else {
-                            card.element.fadeOut();
-                        }
+            var operator = score.split(' ')[0];
+            var score = parseInt(score.split(' ')[1]);
+            
+            $.each(films, function(i, card) {
+                try {
+                    var qualifier = card.film.scoring.average >= parseInt(score);
+                    if (operator == '<=') {
+                        qualifier = card.film.scoring.average <= parseInt(score);
                     }
-                    catch(err) {
-                        card.element.fadeOut();
+
+                    if (card.film.scoring.average && (qualifier)) {
+                        result.push(card);
                     }
                 }
+                catch(err) {}
             });
-        },
-
-        // Reset
-        reset: function(event) {
-            $('nav > select[name="provider_filter"]').val('all');
-            $('nav > select[name="genre_filter"]').val('all');
-            $('nav > select[name="score_filter"]').val('all');
-
-            WATCHLIST.container.find('.card').fadeIn();
+            
+            return result;
         }
+    },
+
+    apply_filters: function() {
+        var films = WATCHLIST.films;
+        console.log('Applying {0} filters on {1} films'.format(Object.keys(WATCHLIST.filters).length, films.length));
+        console.log(WATCHLIST.filters);
+        
+        $.each(WATCHLIST.filters, function(filter, qualifier) {
+            films = WATCHLIST.filter[filter](films, qualifier);
+            console.log('> Filter: {0}, qualifier = {1} -- found {2}'.format(filter, qualifier, films.length));
+        });
+
+        console.log('Showing {0} films, {1} filters applied'.format(films.length, Object.keys(WATCHLIST.filters).length));
+
+        $.each(films, function(i, card) {
+            if (card.element.is(':hidden')) {
+                card.show();
+            }
+        });
+
+        var filtered = WATCHLIST.films.filter(item1 => !films.some(item2 => (item2.film.slug === item1.film.slug)))
+        
+        console.log('Hiding {0} filtered films'.format(filtered.length));
+
+        $.each(filtered, function(i, card) {
+            if (card.element.is(':visible')) {
+                card.hide();
+            }
+        });
+    },
+
+    reset_filters: function() {
+        console.log('Resetting all filters');
+        
+        WATCHLIST.filters = {};
+
+        $('nav > select[name="provider_filter"]').val('all');
+        $('nav > select[name="genre_filter"]').val('all');
+        $('nav > select[name="score_filter"]').val('all');
+
+        WATCHLIST.apply_filters();
     },
 
     // Shuffle
     shuffle: function() {
         console.log('Shuffling watchlist');
         WATCHLIST.container.find('.card').shuffle();
+    },
+
+    // Get visible
+    get_visible: function() {
+        var visible_cards = [];
+
+        $.each(WATCHLIST.container.find('.card:visible'), function(i, card) {
+            var slug = $(card).data('slug');
+            var card = WATCHLIST.get_film(slug);
+
+            if (card) {
+                visible_cards.push(card);
+            }
+        });
+
+        console.log('Got {0} visible cards'.format(visible_cards.length));
+
+        return visible_cards;
+    },
+
+    // Get hidden
+    get_hidden: function() {
+        var hdden_cards = [];
+
+        $.each(WATCHLIST.container.find('.card:hidden'), function(i, card) {
+            var slug = $(card).data('slug');
+            var card = WATCHLIST.get_film(slug);
+
+            if (card) {
+                hdden_cards.push(card);
+            }
+        });
+
+        console.log('Got {0} hidden cards'.format(hdden_cards.length));
+
+        return hdden_cards;
     },
 
     // Get film
@@ -335,6 +422,12 @@ var WATCHLIST = WATCHLIST || {
         WATCHLIST.films.push(card);
 
         return card;
+    },
+
+    // Update counter
+    update_counter: function() {
+        var visible_count = WATCHLIST.container.find('.card:visible').length;
+        $('nav div.counter > span.visible').text(visible_count);
     }
 };
 

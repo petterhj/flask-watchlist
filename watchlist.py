@@ -55,7 +55,6 @@ class Watchlist(object):
 
         # Load cached watchlist films
         self.films = self.load()
-        self.size = len(self.films)
 
 
     # Load
@@ -474,6 +473,13 @@ class Watchlist(object):
         title = slug.split(year_split)[0].replace('-', ' ')
 
         return title, year
+
+    
+    # Property: Size
+    @property
+    def size(self):
+        return len(self.films)
+    
 
 
 

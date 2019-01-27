@@ -4,7 +4,7 @@ var WATCHLIST = WATCHLIST || {
     options: {
         name: 'WATCHLIST',
         notification_position: 'bottomRight',
-        max_films: 15//9999
+        max_films: 9999
     },
 
     // Container
@@ -52,6 +52,7 @@ var WATCHLIST = WATCHLIST || {
         // Get Films
         $.getJSON('/json/watchlist/', function(data) {
             var i = 0;
+
             $.each(data.result, function(slug, film) {
                 i += 1;
 
@@ -72,19 +73,6 @@ var WATCHLIST = WATCHLIST || {
             WATCHLIST.apply_filters();
         });
 
-        // Filter: Offerings
-        $('nav > button[name="hide_no_offers"]').on('click', function() {
-            if (WATCHLIST.filters.offerings === undefined || WATCHLIST.filters.offerings === false) {
-                WATCHLIST.filters.offerings = true;
-                $(this).text('Show no offers');
-            } else {
-                WATCHLIST.filters.offerings = false;
-                $(this).text('Hide no offers');
-            }
-             
-            WATCHLIST.apply_filters();
-        });
-
         // Filter: Genre
         $('nav > select[name="genre_filter"]').on('change', function() {
             var genre = $(this).val().split(' (')[0];
@@ -99,7 +87,6 @@ var WATCHLIST = WATCHLIST || {
         // Filter: Score
         $('nav > select[name="score_filter"]').on('change', function() {
             var score = $(this).val();
-            console.log(score);
             if (score === 'all') {
                 delete WATCHLIST.filters.score;
             } else {
@@ -108,8 +95,35 @@ var WATCHLIST = WATCHLIST || {
             WATCHLIST.apply_filters();
         });
 
+        // Filter: Offering type
+        $('nav > select[name="offering_type_filter"]').on('change', function() {
+            var offering_type = $(this).val();
+            if (offering_type === 'all') {
+                delete WATCHLIST.filters.offering_type;
+            } else {
+                WATCHLIST.filters.offering_type = offering_type.toLowerCase();
+            }
+            WATCHLIST.apply_filters();
+        });
+
+        // Filter: Offerings
+        $('nav > button[name="hide_no_offers"]').on('click', function() {
+            if (WATCHLIST.filters.offerings === undefined || WATCHLIST.filters.offerings === false) {
+                WATCHLIST.filters.offerings = true;
+                $(this).text('Show no offers');
+            } else {
+                WATCHLIST.filters.offerings = false;
+                $(this).text('Hide no offers');
+            }
+             
+            WATCHLIST.apply_filters();
+        });
+
         // Reset filters
         $('nav > button[name="reset_filter"]').on('click', WATCHLIST.reset_filters);
+
+        // Random
+        $('nav > button[name="random"]').on('click', WATCHLIST.random);
 
         // Shuffle
         $('nav > button[name="shuffle"]').on('click', WATCHLIST.shuffle);
@@ -155,8 +169,12 @@ var WATCHLIST = WATCHLIST || {
                         type: 'error',
                         layout: WATCHLIST.options.notification_position,
                         timeout: 2000,
-                        text: 'Removed {0}'.format(slug)
+                        text: 'Removed {0}'.format(card.film.title)
                     }).show();
+
+                    card.remove();
+
+                    $('nav div.counter > span.size').text((parseInt($('nav div.counter > span.size').text()) - 1));
                 });
 
                 // Add new filmes
@@ -174,8 +192,10 @@ var WATCHLIST = WATCHLIST || {
                         type: 'success',
                         layout: WATCHLIST.options.notification_position,
                         timeout: 2000,
-                        text: 'Added {0}'.format(slug)
+                        text: 'Added {0}'.format(card.film.title)
                     }).show();
+
+                    $('nav div.counter > span.size').text((parseInt($('nav div.counter > span.size').text()) + 1));
                 });
             } else {
                 notification.setType('error');
@@ -253,23 +273,6 @@ var WATCHLIST = WATCHLIST || {
             return result;
         },
 
-        // Offerings
-        offerings: function(films, has_offerings) {
-            if (!has_offerings) {
-                return films;
-            }
-
-            var result = [];
-
-            $.each(films, function(i, card) {
-                if (card.film.offerings && Object.keys(card.film.offerings).length > 0) {
-                    result.push(card);
-                }
-            });
-
-            return result;
-        },
-
         // Genre
         genre: function(films, genre) {
             var result = [];
@@ -307,7 +310,37 @@ var WATCHLIST = WATCHLIST || {
             });
             
             return result;
-        }
+        },
+
+        // Offerings
+        offerings: function(films, has_offerings) {
+            if (!has_offerings) {
+                return films;
+            }
+
+            var result = [];
+
+            $.each(films, function(i, card) {
+                if (card.film.offerings && Object.keys(card.film.offerings).length > 0) {
+                    result.push(card);
+                }
+            });
+
+            return result;
+        },
+
+        // Offering type
+        offering_type: function(films, offering_type) {
+            var result = [];
+
+            $.each(films, function(i, card) {
+                if (card.element.find('.'+offering_type).length > 0) {
+                    result.push(card);
+                }
+            });
+
+            return result;
+        },
     },
 
     apply_filters: function() {
@@ -347,6 +380,7 @@ var WATCHLIST = WATCHLIST || {
         $('nav > select[name="provider_filter"]').val('all');
         $('nav > select[name="genre_filter"]').val('all');
         $('nav > select[name="score_filter"]').val('all');
+        $('nav > select[name="offering_type"]').val('all');
 
         WATCHLIST.apply_filters();
     },
@@ -355,6 +389,25 @@ var WATCHLIST = WATCHLIST || {
     shuffle: function() {
         console.log('Shuffling watchlist');
         WATCHLIST.container.find('.card').shuffle();
+    },
+
+    // Random
+    random: function() {
+        var available = WATCHLIST.container.find('.card:visible');
+        var visible_count = available.length;
+        var random = getRandomInt(1, visible_count);
+        
+        console.log('Focusing random ({0}) film (total available = {1})'.format(random, visible_count));
+
+        var slug = available.eq((random - 1)).data('slug');
+        var card = WATCHLIST.get_film(slug);
+
+        WATCHLIST.container.find('.card.focused').removeClass('focused');
+        
+        card.move('top', function(element) {
+            // console.log('!!!')
+            element.addClass('focused');
+        });
     },
 
     // Get visible

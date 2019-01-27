@@ -343,19 +343,6 @@ var FilmCard = function(watchlist, film) {
         this.element.addClass('focused');
     };
 
-    // Hide
-    this.hide = function(duration) {
-        if (duration === undefined) {
-            duration = 400;
-        }
-        
-        this.element.fadeOut(duration, function() {
-            WATCHLIST.update_counter();
-        });
-        
-        return this.element;
-    };
-
     // Show
     this.show = function(duration) {
         if (!duration) {
@@ -369,8 +356,21 @@ var FilmCard = function(watchlist, film) {
         return this.element;
     };
 
+    // Hide
+    this.hide = function(duration) {
+        if (duration === undefined) {
+            duration = 400;
+        }
+        
+        this.element.fadeOut(duration, function() {
+            WATCHLIST.update_counter();
+        });
+        
+        return this.element;
+    };
+
     // Move
-    this.move = function(position) {
+    this.move = function(position, callback) {
         // Move element
         this.element.fadeOut('fast', $.proxy(function(){
             if ((!position) || (position === 'top')) {
@@ -380,8 +380,21 @@ var FilmCard = function(watchlist, film) {
                 this.element.appendTo(this.watchlist.container);
             }
             
-            this.element.show();
+            this.element.fadeIn(400, $.proxy(function(){
+                if (callback) {
+                    callback(this.element);
+                }
+            }, this));
         }, this));
+
+        return this.element;
+    };
+
+    // Remove
+    this.remove = function() {
+        console.log('Removing card, slug = {0}'.format(this.film.slug));
+
+        this.element.remove();
     };
 
 

@@ -11,6 +11,13 @@ Array.prototype.diff = function(a) {
     return this.filter(function(i) {return a.indexOf(i) < 0;});
 };
 
+// Random int
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // Handlebars: Join helper
 Handlebars.registerHelper('join', function(items, block) {
     var delimiter = block.hash.delimiter || ", ", 

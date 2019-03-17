@@ -4,7 +4,7 @@ var WATCHLIST = WATCHLIST || {
     options: {
         name: 'WATCHLIST',
         notification_position: 'bottomRight',
-        max_films: 9999
+        max_films: 6000
     },
 
     // Container
@@ -50,16 +50,28 @@ var WATCHLIST = WATCHLIST || {
         Handlebars.registerPartial('offerings', WATCHLIST.templates.card_offerings);
 
         // Get Films
+        console.time('getfilms');
+
         $.getJSON('/json/watchlist/', function(data) {
             var i = 0;
+            
+            console.timeEnd('getfilms');
+            console.time('renderfilms');            
 
             $.each(data.result, function(slug, film) {
                 i += 1;
 
-                if (i <= WATCHLIST.options.max_films) {
-                    WATCHLIST.add_film(slug, film);
+                if (i > WATCHLIST.options.max_films) {
+                    return false;
                 }
+
+                // Add film
+                WATCHLIST.add_film(slug, film);
             });
+
+            WATCHLIST.update_counter();
+
+            console.timeEnd('renderfilms');
         });
 
         // Filter: Provider
@@ -148,11 +160,11 @@ var WATCHLIST = WATCHLIST || {
         $.getJSON('/json/watchlist/sync/', function(data) {
             if (data.success) {
                 console.log('Done syncing');
-                console.log('> Adding: {0}'.format(data.result.new.length));
+                console.log('> Adding: {0}'.format(Object.keys(data.result.new).length));
                 console.log('> Removing: {0}'.format(data.result.removed.length));
 
                 notification.setText('Done syncing, {0} changes!'.format(
-                    (data.result.new.length + data.result.removed.length)
+                    (Object.keys(data.result.new).length + data.result.removed.length)
                 ));
                 notification.setType('success');
                 notification.setTimeout(1000);
@@ -163,13 +175,15 @@ var WATCHLIST = WATCHLIST || {
                     
                     var card = WATCHLIST.container.find('.card[data-slug="{0}"]'.format(slug))
                     
-                    card.hide();
+                    console.log(WATCHLIST.get_film(slug));
+
+                    card.hide(600);
 
                     new Noty({
                         type: 'error',
                         layout: WATCHLIST.options.notification_position,
                         timeout: 2000,
-                        text: 'Removed {0}'.format(card.film.title)
+                        text: 'Removed {0}'.format(slug)
                     }).show();
 
                     card.remove();
@@ -178,10 +192,12 @@ var WATCHLIST = WATCHLIST || {
                 });
 
                 // Add new filmes
-                $.each(data.result.new, function(i, slug) {
+                $.each(data.result.new, function(slug, film) {
                     console.log('Adding {0}'.format(slug));
 
-                    var card = WATCHLIST.add_film(slug, {});
+                    var card = WATCHLIST.add_film(slug, film);
+
+                    console.log(card);
 
                     card.element.addClass('new');
 
@@ -192,7 +208,7 @@ var WATCHLIST = WATCHLIST || {
                         type: 'success',
                         layout: WATCHLIST.options.notification_position,
                         timeout: 2000,
-                        text: 'Added {0}'.format(card.film.title)
+                        text: 'Added {0}'.format(film.title)
                     }).show();
 
                     $('nav div.counter > span.size').text((parseInt($('nav div.counter > span.size').text()) + 1));

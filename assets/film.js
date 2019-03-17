@@ -3,7 +3,7 @@ var EventBus = function() {
     this.events = {};
 
     this.on = function(event, cb) {
-        console.log('Event fired: {0}'.format(event));
+        // console.log('Event fired: {0}'.format(event));
         event = this.events[event] = this.events[event] || [];
         event.push(cb);
     }
@@ -37,7 +37,7 @@ var FilmCard = function(watchlist, film) {
 
     // Render
     this.render = function(target) {
-        console.log('Rendering film card for {0}'.format(this.film.slug));
+        logger('Rendering film card for {0}'.format(this.film.slug), true);
 
         // Render template
         this.film.offerings = (this.film.offerings ? this.film.offerings : {});
@@ -46,21 +46,19 @@ var FilmCard = function(watchlist, film) {
         // Refresh if exists
         var existing_element = target.find('.card[data-slug="{0}"]'.format(this.film.slug))
 
-        console.log('> Exists: {0}'.format(existing_element.length));
-
         if (existing_element.length === 0) {
             // Append
-            console.log('Appending as new card');
-            this.hide(0);
-            target.append(this.element);
-            this.show();
+            // console.log('Appending as new card');
+            this.hide(0, false);
+            this.element.appendTo(target);
+            this.show(400, false);
         } 
         else {
             // Refresh
             console.log('Refreshing existing card');
-
+            
             existing_element.fadeOut('slow', $.proxy(function(){
-                this.hide(0);
+                // this.hide(0);
                 existing_element.replaceWith(this.element);
                 this.show();
             }, this));
@@ -344,26 +342,26 @@ var FilmCard = function(watchlist, film) {
     };
 
     // Show
-    this.show = function(duration) {
-        if (!duration) {
-            duration = 400;
-        }
+    this.show = function(duration, update_counter) {
+        duration = duration || 400;
         
         this.element.fadeIn(duration, function() {
-            WATCHLIST.update_counter();
+            if (update_counter !== false) {
+                WATCHLIST.update_counter();
+            }
         });
 
         return this.element;
     };
 
     // Hide
-    this.hide = function(duration) {
-        if (duration === undefined) {
-            duration = 400;
-        }
-        
+    this.hide = function(duration, update_counter) {
+        duration = duration || 400;
+
         this.element.fadeOut(duration, function() {
-            WATCHLIST.update_counter();
+            if (update_counter !== false) {
+                WATCHLIST.update_counter();
+            }
         });
         
         return this.element;
@@ -407,7 +405,7 @@ var FilmCard = function(watchlist, film) {
             Fired after film card is rendered.
         */
         
-        console.log('Film card rendered, slug = {0}'.format(card.film.slug));
+        logger('Film card rendered, slug = {0}'.format(card.film.slug), true);
             
         // Update metadata
         card.element.find('i.zmdi.update_metadata').on('click', $.proxy(function(e) {

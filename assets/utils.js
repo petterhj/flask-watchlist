@@ -1,3 +1,14 @@
+// Logger
+function logger(message, async) {
+    if (async === true) {
+        window.setTimeout(function() { 
+            console.log(message);
+        }, 0);
+    } else {
+        console.log(message);
+    }
+}
+
 // String format
 String.prototype.format = function () {
     var args = [].slice.call(arguments);

@@ -93,7 +93,7 @@ class Watchlist(object):
     def sync(self):
         logger.info('Syncing watchlist')
 
-        results = {'new': [], 'removed': []}
+        results = {'new': {}, 'removed': []}
 
         # Fetch Letterboxd watchlist
         logger.info('> Existing films: %d' % (len(self.films.keys())))
@@ -119,7 +119,7 @@ class Watchlist(object):
                     # 'year': metadata['year'],
                 }
 
-                results['new'].append(slug)
+                results['new'][slug] = self.films[slug]
 
                 logger.info('> Added %s' % (slug))
 
